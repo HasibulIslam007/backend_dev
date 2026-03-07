@@ -1,16 +1,17 @@
 
-import type { Request, Response, NextFunction } from "express";
-import {User} from "./user.model.js";
+import type { Request, Response} from "express";
+
 import { StatusCodes } from "http-status-codes";
 import { UserService } from "./user.service.js";
 import { catchAsync } from "../../utils/catchAsync.js";
-import { send } from "vite";
+
 import { sendResponse } from "../../utils/sendResponse.js";
+import httpStatus from "http-status-codes";
 
 
 
 
-const createUser = catchAsync(async(req:Request,res:Response , next:NextFunction )=>{
+const createUser = catchAsync(async(req: Request, res: Response) => {
     const user = await UserService.createUser(req.body)
 
     sendResponse(res, {
@@ -21,10 +22,10 @@ const createUser = catchAsync(async(req:Request,res:Response , next:NextFunction
         });
 });
 
-const getAllUsers = catchAsync(async(req:Request,res:Response , next:NextFunction )=>{
+const getAllUsers = catchAsync(async(req: Request, res: Response) => {
     const users = await UserService.getAllUserService();
     sendResponse(res, {
-        statusCode: StatusCodes.OK,
+        statusCode: httpStatus.CREATED,
         success: true,
         message:"All users retrieved successfully",
         data: users.data,
