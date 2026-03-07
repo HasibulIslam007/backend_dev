@@ -3,6 +3,11 @@ import AppError from "../../errorHelper/AppError.js";
 import type { AutuhenticatedUser, IUser } from "./user.interface.js";
 import { User } from "./user.model.js";
 import bcrypt from "bcryptjs";
+import { envVars } from "../../config/env.js";
+import type { JwtPayload } from "jsonwebtoken";
+import { UserRole } from "./user.interface.js";
+import bcryptjs from "bcryptjs";
+
 
 
 
@@ -45,8 +50,50 @@ const getAllUserService = async () => {
   const total = await User.countDocuments();
   return { data: users, meta: { total } };
 };
+const updateUser = async (userId: string, payload: Partial<IUser>, decodedToken: JwtPayload) => {
+
+    const ifUserExist = await User.findById(userId);
+
+    if (!ifUserExist) {
+        throw new AppError(httpStatus.NOT_FOUND, "User Not Found")
+    }
+
+    /**
+     * email - can not update
+     * name, phone, password address
+     * password - re hashing
+     *  only admin superadmin - role, isDeleted...
+     * 
+     * promoting to superadmin - superadmin
+     */
+
+    if (payload.role) {
+        if (decodedToken.role === UserRole.USER || decodedToken.role === UserRole.GUIDE) {
+            throw new AppError(httpStatus.FORBIDDEN, "You are not authorized");
+        }
+
+        if (payload.role === UserRole.SUPER_ADMIN && decodedToken.role === UserRole.ADMIN) {
+            throw new AppError(httpStatus.FORBIDDEN, "You are not authorized");
+        }
+    }
+
+    if (payload.isActive || payload.isDeleted || payload.isVerified) {
+        if (decodedToken.role === UserRole.USER || decodedToken.role === UserRole.GUIDE) {
+            throw new AppError(httpStatus.FORBIDDEN, "You are not authorized");
+        }
+    }
+
+    if (payload.password) {
+        payload.password = await bcryptjs.hash(payload.password, envVars.BCRYPT_SALT_ROUND)
+    }
+
+    const newUpdatedUser = await User.findByIdAndUpdate(userId, payload, { new: true, runValidators: true })
+
+    return newUpdatedUser
+}
 
 export const UserService = {
   createUser,
   getAllUserService,
+  updateUser
 };

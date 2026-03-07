@@ -33,7 +33,7 @@ const credentialsLogin = async (payload: Partial<IUser>) => {
     email: isUserExist.email,
     role: isUserExist.role,
   };
-  const accessToken = jwt.sign(jwtPayload, "serectKey", { expiresIn: "1h" });
+  const accessToken = jwt.sign(jwtPayload, "serect", { expiresIn: "1h" });
   return {
     success: true,
     message: "Login successful",
