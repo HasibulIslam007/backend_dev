@@ -8,10 +8,12 @@ import { globalErrorHandler } from "./app/middlewares/globalErrorHandeler.js";
 import httpStatus from "http-status-codes";
 import { success } from "zod";
 import ErrorPage from "./app/middlewares/ErrorPage.js";
+import cookieParser from "cookie-parser";
 
 const app = express();
 
 app.use(express.json());
+app.use(cookieParser());
 
 app.use(cors())
 
