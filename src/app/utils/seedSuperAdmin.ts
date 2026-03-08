@@ -1,3 +1,5 @@
+/* eslint-disable no-undef */
+/* eslint-disable no-console */
 import bcryptjs from "bcryptjs";
 import { envVars } from "../config/env.js";
 

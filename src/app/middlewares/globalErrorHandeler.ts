@@ -1,5 +1,5 @@
 import AppError from "../errorHelper/AppError.js";
-import { envVars } from "../modules/config/env.js";
+import { envVars } from "../config/env.js";
 import { StatusCodes } from "http-status-codes";
 
 
