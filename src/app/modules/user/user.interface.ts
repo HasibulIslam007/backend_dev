@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import type { Types } from "mongoose";
 
  
@@ -15,6 +16,7 @@ export interface AutuhenticatedUser {
 }
 
 export enum IsActive {
+
     ACTIVE = "ACTIVE",
     INACTIVE = "INACTIVE",
     BLOCKED = "BLOCKED"

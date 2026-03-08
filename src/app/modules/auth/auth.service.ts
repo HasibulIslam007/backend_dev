@@ -39,7 +39,7 @@ const credentialsLogin = async (payload: Partial<IUser>) => {
   const userToken = createTokens(isUserExist)
 
 
-  const {password : pass, ...rest} = isUserExist.toObject();
+  const {password :pass, ...rest} = isUserExist.toObject();
   return {
     success: true,
     message: "Login successful",

@@ -1,26 +1,49 @@
 
 import { AuthService } from "./auth.service.js";
 import { catchAsync } from "../../utils/catchAsync.js";
-import  type {Request , Response} from "express";
+import  type {Request , Response ,NextFunction} from "express";
 import { sendResponse } from "../../utils/sendResponse.js";
 import { StatusCodes } from "http-status-codes";
 import { setAuthCookie } from "../../utils/setCookie.js";
 import type { JwtPayload } from "jsonwebtoken";
+import { th } from "zod/locales";
+import AppError from "../../errorHelper/AppError.js";
+import { createTokens } from "../../utils/userTokens.js";
+import { envVars } from "../../config/env.js";
+import passport from "passport";
 
 
-const credentialsLogin = catchAsync(async (req: Request, res: Response) => {
+
+const credentialsLogin = catchAsync(async (req: Request, res: Response, next:NextFunction) => {
    
 
-    const loginInfo = await AuthService.credentialsLogin(req.body);
+    passport.authenticate("local",async (err:any, user:any, info:any) => {
+        if (err) {
+            return next(new AppError(401, err));
+        }
+        if (!user) {
+            return next(new AppError(401, info.message || "Authentication failed"));
+        }
 
-    setAuthCookie(res, loginInfo);
+        const userToken = await createTokens(user);
+
+        const {password: pass, ...rest}= user.toObject();
+        
+    
+
+    setAuthCookie(res, userToken);
 
     sendResponse(res, {
         statusCode: StatusCodes.OK,
         success: true,
         message: "Login successful",
-        data: loginInfo
+        data: {
+            accessToken: userToken.accessToken,
+            refreshToken: userToken.refreshToken,   
+            user: rest
+        }
     });
+    })(req, res, next);
 });
 
 const getNewAccessToken = catchAsync(async (req: Request, res: Response) => {
@@ -79,6 +102,27 @@ const resetPassword = catchAsync(async (req: Request, res: Response) => {
         message: "Password Changed Successfully",
         data: null,
     })
+});
+
+const googleCallbackController = catchAsync(async (req: Request, res: Response) => {
+    let redirectTo = req.query.state ? req.query.state as string : ""
+
+        if (redirectTo.startsWith("/")){
+            redirectTo = redirectTo.slice(1)
+        }
+
+
+    const user = req.user;
+    if (!user) {
+        throw new AppError(StatusCodes.UNAUTHORIZED, "Google authentication failed");
+    }
+
+    const tokenInfo = createTokens(user);
+    
+    setAuthCookie(res, tokenInfo);
+
+    res.redirect(`${envVars.FRONTEND_URL}/${redirectTo}`); // Redirect to frontend after successful login
+
 })
 
 
@@ -86,5 +130,6 @@ export const AuthController = {
     credentialsLogin,
     getNewAccessToken,
     logout,
-    resetPassword
+    resetPassword,
+    googleCallbackController
 }   

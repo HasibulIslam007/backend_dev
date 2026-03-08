@@ -44,9 +44,7 @@ export const createNewAccessTokenWithRefreshToken = async  (refreshToken: string
         role: isUserExist.role,
     };
 
-    const accessToken = jwt.sign(jwtPayload, envVars.JWT_ACCESS_SECRET, {
-        expiresIn: envVars.JWT_ACCESS_EXPIRES,
-    });
+    const accessToken = generateToken(jwtPayload, envVars.JWT_ACCESS_SECRET, envVars.JWT_ACCESS_EXPIRES);
 
     return { accessToken };
 };
