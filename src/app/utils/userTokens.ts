@@ -3,19 +3,19 @@ import {User} from "../modules/user/user.model.js";
 import jwt from "jsonwebtoken";
 import { verifyToken } from "./jwt.js";
 import { envVars } from "../config/env.js";
-import { email } from "zod";
 import AppError from "../errorHelper/AppError.js";
+import { generateToken } from "./jwt.js";
 
 export const createTokens = (user: Partial<IUser>) => {
     const jwtPayload = {
-        id: user._id,
+        userId: user._id,
         email: user.email,
         role: user.role,
-      };
-      const accessToken = jwt.sign(jwtPayload, "serectKey", { expiresIn: "1h" });
-    
-    
-      const refreshToken = jwt.sign(jwtPayload  , "refreshSerectKey",   { expiresIn: "7d" });   
+    };
+
+    const accessToken = generateToken(jwtPayload, envVars.JWT_ACCESS_SECRET, envVars.JWT_ACCESS_EXPIRES);
+
+    const refreshToken = generateToken(jwtPayload, envVars.JWT_REFRESH_SECRET, envVars.JWT_REFRESH_EXPIRES);
 
     return { accessToken, refreshToken };
 }
@@ -38,12 +38,15 @@ export const createNewAccessTokenWithRefreshToken = async  (refreshToken: string
         throw new AppError(403, "Your account is not verified. Please verify your account.")
     }
 
-    const jwtPayload ={
-        user : isUserExist.id,
+    const jwtPayload = {
+        userId: isUserExist.id,
         email: isUserExist.email,
-        role: isUserExist.role
+        role: isUserExist.role,
+    };
 
-    }
-    const accessToken = jwt.sign(jwtPayload, envVars.JWT_ACCESS_SECRET, { expiresIn: "1h" });
+    const accessToken = jwt.sign(jwtPayload, envVars.JWT_ACCESS_SECRET, {
+        expiresIn: envVars.JWT_ACCESS_EXPIRES,
+    });
+
     return { accessToken };
 };

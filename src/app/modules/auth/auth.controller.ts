@@ -5,6 +5,7 @@ import  type {Request , Response} from "express";
 import { sendResponse } from "../../utils/sendResponse.js";
 import { StatusCodes } from "http-status-codes";
 import { setAuthCookie } from "../../utils/setCookie.js";
+import type { JwtPayload } from "jsonwebtoken";
 
 
 const credentialsLogin = catchAsync(async (req: Request, res: Response) => {
@@ -64,7 +65,7 @@ const logout= catchAsync(async (req: Request, res: Response) => {
     });
 });
 
-const resetPassword = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+const resetPassword = catchAsync(async (req: Request, res: Response) => {
 
     const newPassword = req.body.newPassword;
     const oldPassword = req.body.oldPassword;

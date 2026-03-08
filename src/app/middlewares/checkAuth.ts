@@ -36,8 +36,15 @@ export const checkAuth = (...authRoles: string[]) => async (
       throw new AppError(401, "Invalid or expired token");
     }
 
-    // Find user
-    const user = await User.findOne({ email: verifiedToken.email });
+    // Find user (prefer id from token)
+    const tokenUserId =
+      (verifiedToken as JwtPayload & { userId?: string; id?: string; user?: string }).userId ||
+      (verifiedToken as JwtPayload & { userId?: string; id?: string; user?: string }).id ||
+      (verifiedToken as JwtPayload & { userId?: string; id?: string; user?: string }).user;
+
+    const user = tokenUserId
+      ? await User.findById(tokenUserId)
+      : await User.findOne({ email: verifiedToken.email });
     if (!user) {
       throw new AppError(httpStatus.BAD_REQUEST, "User does not exist");
     }
