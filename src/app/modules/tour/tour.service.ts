@@ -1,0 +1,62 @@
+import type { ITour } from "./tour.interface.js";
+import { Tour, TourType } from "./tour.model.js";
+
+
+const createTour = async (payload: ITour) =>{
+    const exitingTour = await Tour.findOne({ title: payload.title });
+
+    if (exitingTour) {
+        throw new Error("Tour already exists");
+    }
+    const tour = await Tour.create(payload);
+
+    return tour;    
+
+}
+
+
+
+const updateTour = async (id: string, payload: Partial<ITour>) => {
+    const exitingTour = await Tour.findById(id);
+
+    if (!exitingTour) {
+        throw new Error("Tour not found");
+    }
+
+    const updatedTour = await Tour.findByIdAndUpdate(id, payload, { new: true });
+
+    return updatedTour;
+}
+
+const deleteTour = async (id: string) => {
+    return await Tour.findByIdAndDelete(id);
+}
+
+const getAllTourTypes = async () => {
+    return await TourType.find();
+}
+
+const updateTourType = async (id: string, payload: Partial<ITour>) => {
+    const exitingTourType = await TourType.findById(id);
+
+    if (!exitingTourType) {
+        throw new Error("Tour type not found");
+    }
+
+    const updatedTourType = await TourType.findByIdAndUpdate(id, payload, { new: true });
+
+    return updatedTourType;
+}
+
+const deleteTourType = async (id: string) => {
+    return await TourType.findByIdAndDelete(id);
+}
+
+export const TourService = {
+    createTour,
+    updateTour,
+    deleteTour,
+    getAllTourTypes,
+    updateTourType,
+    deleteTourType
+};
