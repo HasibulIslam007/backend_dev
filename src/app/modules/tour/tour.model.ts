@@ -84,39 +84,38 @@ const tourSchema = new Schema<ITour>({
     timestamps: true
 })
 
-tourSchema.pre("save", async function(next) {
-    if (this.isModified("title")) {
-        const baseSlug = this.title.toLowerCase().split(" ").join("-");
-        let slug = `${baseSlug}`;
-        let count = 1;
-
-        while (await Tour.exists({ slug })) {
-            slug = `${baseSlug}-${count++}`;
-            
-        }
-
-        this.slug = slug;
+const buildUniqueSlug = async (title: string, excludeId?: unknown) => {
+    const baseSlug = title.trim().toLowerCase().split(/\s+/).join("-");
+    let slug = baseSlug;
+    let count = 1;
+    const query: Record<string, unknown> = { slug };
+    if (excludeId) {
+        query._id = { $ne: excludeId };
     }
-    next();
+
+    while (await Tour.exists(query)) {
+        slug = `${baseSlug}-${count++}`;
+        query.slug = slug;
+    }
+
+    return slug;
+};
+
+tourSchema.pre("validate", async function() {
+    if (this.isModified("title") && this.title) {
+        const excludeId = this.isNew ? undefined : this._id;
+        this.slug = await buildUniqueSlug(this.title, excludeId);
+    }
 })
 
-tourSchema.pre("findOneAndUpdate", async function(next) {
+tourSchema.pre("findOneAndUpdate", async function() {
     const tour = this.getUpdate() as Partial<ITour>;
 
     if (tour.title) {
-        const baseSlug = tour.title.toLowerCase().split(" ").join("-");
-        let slug = `${baseSlug}`;
-        let count = 1;
-
-        while (await Tour.exists({ slug })) {
-            slug = `${baseSlug}-${count++}`;
-          
-        }
-
-        tour.slug = slug;
+        const query = this.getQuery() as { _id?: unknown };
+        tour.slug = await buildUniqueSlug(tour.title, query?._id);
     }
     this.setUpdate(tour);
-    next();
 })
 
 export const Tour = model<ITour>("Tour", tourSchema);

@@ -1,5 +1,6 @@
 import type { IDivision } from "./division.interface.js";
 import { Division } from "./division.model.js";
+import { isValidObjectId } from "mongoose";
 
 
 const createDivision = async (payload: IDivision) => {
@@ -24,7 +25,13 @@ const getAllDivisions = async () => {
 }
 
 const getSingleDivision = async (slug: string) => {
-    const division = await Division.findOne({ slug });
+    const normalizedSlug = slug.trim().toLowerCase();
+    let division = await Division.findOne({ slug: normalizedSlug });
+
+    if (!division && isValidObjectId(slug)) {
+        division = await Division.findById(slug);
+    }
+
     if (!division) {
         throw new Error("Division not found");
     }

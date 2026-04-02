@@ -2,9 +2,9 @@ import type { Request, Response } from "express";
 import { TourService } from "./tour.service.js";
 import { sendResponse } from "../../utils/sendResponse.js";
 
-const createTour =(req: Request, res: Response) => {
+const createTour = async (req: Request, res: Response) => {
 
-    const result = TourService.createTour(req.body);
+    const result = await TourService.createTour(req.body);
 
     sendResponse(res, {
         statusCode : 200,
@@ -15,25 +15,26 @@ const createTour =(req: Request, res: Response) => {
 
 };
 
-const getAllTours = (req: Request, res: Response) => {
+const getAllTours = async (req: Request, res: Response) => {
     const query = req.query;
-    const result = TourService.getAllTours(query as Record<string, string>);
+    const result = await TourService.getAllTours(query as Record<string, string>);
     
     sendResponse(res, {
         statusCode : 200,
         success : true,
         message : "Tours retrieved successfully",
-        data : result
+        data : result.data,
+        meta : result.meta
     })  
 
 
 };
 
-const UpdateTour = (req: Request, res: Response) => {
+const UpdateTour = async (req: Request, res: Response) => {
 
     const { id } = req.params;
 
-    const result = TourService.updateTour(id as string, req.body);
+    const result = await TourService.updateTour(id as string, req.body);
 
     sendResponse(res, {
         statusCode : 200,
@@ -44,11 +45,11 @@ const UpdateTour = (req: Request, res: Response) => {
 
 };
 
-const deleteTour = (req: Request, res: Response) => {
+const deleteTour = async (req: Request, res: Response) => {
 
     const { id } = req.params;
 
-    const result = TourService.deleteTour(id as string);
+    const result = await TourService.deleteTour(id as string);
 
     sendResponse(res, {
         statusCode : 200,
@@ -59,9 +60,10 @@ const deleteTour = (req: Request, res: Response) => {
 
 };
 
-const createTourType = (req: Request, res: Response) => {
+const createTourType = async (req: Request, res: Response) => {
 
-    const result = TourService.createTourType(name);
+    const { name } = req.body;
+    const result = await TourService.createTourType(name);
 
     sendResponse(res, {
         statusCode : 200,
@@ -73,9 +75,9 @@ const createTourType = (req: Request, res: Response) => {
 
 };
 
-const getAllTourTypes = (req: Request, res: Response) => {
+const getAllTourTypes = async (req: Request, res: Response) => {
 
-    const result = TourService.getAllTourTypes();
+    const result = await TourService.getAllTourTypes();
 
     sendResponse(res, {
         statusCode : 200,
@@ -86,12 +88,12 @@ const getAllTourTypes = (req: Request, res: Response) => {
 
 };
 
-const updateTourType = (req: Request, res: Response) => {
+const updateTourType = async (req: Request, res: Response) => {
 
     const { id } = req.params;
     const { name } = req.body;
 
-    const result = TourService.updateTourType(id as string, name);
+    const result = await TourService.updateTourType(id as string, { name });
 
     sendResponse(res, {
         statusCode : 200,
@@ -102,11 +104,11 @@ const updateTourType = (req: Request, res: Response) => {
 
 };
 
-const deleteTourType = (req: Request, res: Response) => {
+const deleteTourType = async (req: Request, res: Response) => {
 
     const { id } = req.params;
 
-    const result = TourService.deleteTourType(id as string);
+    const result = await TourService.deleteTourType(id as string);
 
     sendResponse(res, {
         statusCode : 200,

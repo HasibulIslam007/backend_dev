@@ -1,5 +1,8 @@
-import type { ITour } from "./tour.interface.js";
+
+import type { ITour, ITourType } from "./tour.interface.js";
 import { Tour, TourType } from "./tour.model.js";
+import { QueryBuilder } from "../../utils/QueryBuilder.js";
+
 
 
 const createTour = async (payload: ITour) =>{
@@ -11,6 +14,26 @@ const createTour = async (payload: ITour) =>{
     const tour = await Tour.create(payload);
 
     return tour;    
+
+}
+
+const getAllTours = async (query: Record<string, string>) => {
+
+    const queryBuilder = new QueryBuilder(Tour.find(), query)
+
+    const tours = await queryBuilder.build().exec();
+
+    const [data, meta ] = await Promise.all([
+        Promise.resolve(tours),
+        queryBuilder.getMeta()
+    ])
+
+    return {
+        data,
+        meta
+    }   
+
+
 
 }
 
@@ -36,7 +59,7 @@ const getAllTourTypes = async () => {
     return await TourType.find();
 }
 
-const updateTourType = async (id: string, payload: Partial<ITour>) => {
+const updateTourType = async (id: string, payload: Partial<ITourType>) => {
     const exitingTourType = await TourType.findById(id);
 
     if (!exitingTourType) {
@@ -58,5 +81,6 @@ export const TourService = {
     deleteTour,
     getAllTourTypes,
     updateTourType,
-    deleteTourType
+    deleteTourType,
+    getAllTours
 };

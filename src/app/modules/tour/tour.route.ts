@@ -24,7 +24,7 @@ router.get("/",TourController.getAllTours)
 router.patch(
     "/:id",
     checkAuth(UserRole.ADMIN, UserRole.SUPER_ADMIN),
-    validateRequest(createTourZodSchema),
+    validateRequest(updateTourZodSchema),
     TourController.UpdateTour
 )
 
