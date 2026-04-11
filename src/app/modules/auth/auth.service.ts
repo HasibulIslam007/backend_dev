@@ -9,6 +9,9 @@ import { createNewAccessTokenWithRefreshToken } from "../../utils/userTokens.js"
 import type { JwtPayload } from "jsonwebtoken";
 import { envVars } from "../../config/env.js";
 import bcryptjs from "bcryptjs";
+import type { AutuhenticatedUser } from "../user/user.interface.js";
+import { generateToken, verifyToken } from "../../utils/jwt.js";
+
 
 
 
@@ -58,32 +61,135 @@ const getNewAccessToken = async (refreshToken: string) => {
   }
 };
 
-const resetPassword = async (oldPassword: string, newPassword: string, decodedToken: JwtPayload) => {
+const resetPassword = async (payload: Record<string, any>, decodedToken: JwtPayload) => {
+    if (payload.id != decodedToken.userId) {
+        throw new AppError(401, "You can not reset your password")
+    }
 
-    const user = await User.findById(decodedToken.userId);
+    const isUserExist = await User.findById(decodedToken.userId)
+    if (!isUserExist) {
+        throw new AppError(401, "User does not exist")
+    }
+
+    const hashedPassword = await bcryptjs.hash(
+        payload.newPassword,
+        Number(envVars.BCRYPT_SALT_ROUND)
+    )
+
+    isUserExist.password = hashedPassword;
+
+    await isUserExist.save()
+}
+const setPassword = async(userId:string , plainPassword: string) => {
+
+    const user = await User.findById(userId)
 
     if (!user) {
         throw new AppError(httpStatus.NOT_FOUND, "User not found");
     }
+    if (user.password && user.auths?.some(providerObject => providerObject.provider === "google")) {
+        throw new AppError(httpStatus.BAD_REQUEST, "Password is already set for this user");
+    }
+    const hashedPassword = await bcryptjs.hash(
+      plainPassword,
+      Number(envVars.BCRYPT_SALT_ROUND)
+    )
 
-    const isOldPasswordMatch = await bcryptjs.compare(oldPassword, user.password as string);
+    const credentialProvider: AutuhenticatedUser = {
+        provider: "credentials",
+        providerId : user.email
+    }
+
+    const auths: AutuhenticatedUser[] = [...(user.auths || []), credentialProvider ]
+    user.password = hashedPassword;
+    user.auths = auths;
+
+    await user.save();
+
+  }
+
+  const changePassword = async(oldPassword: string, newPassword: string, decodedToken: JwtPayload) => {
+
+    const user = await User.findById(decodedToken.userId);
+
+    const isOldPasswordMatch = await bcryptjs.compare(oldPassword, user?.password as string);
     if (!isOldPasswordMatch) {
         throw new AppError(httpStatus.UNAUTHORIZED, "Old Password does not match");
     }
 
-    user.password = await bcryptjs.hash(newPassword, Number(envVars.BCRYPT_SALT_ROUND));
+    user!.password = await bcryptjs.hash(newPassword, Number(envVars.BCRYPT_SALT_ROUND));
 
-    await user.save();
-
-
-}
+    await user!.save(); 
+     
 
 
+  }
 
+const EMAIL_VERIFY_EXPIRES = "1d";
+
+const createEmailVerificationToken = (user: Partial<IUser>) => {
+  if (!user._id) {
+    throw new AppError(httpStatus.INTERNAL_SERVER_ERROR, "User id missing for verification token");
+  }
+  const payload = {
+    userId: user._id,
+    tokenType: "email_verify",
+  } as JwtPayload;
+
+  return generateToken(payload, envVars.JWT_ACCESS_SECRET, EMAIL_VERIFY_EXPIRES);
+};
+
+const verifyEmail = async (token: string) => {
+  let decoded: JwtPayload & { userId?: string; tokenType?: string };
+  try {
+    decoded = verifyToken(token, envVars.JWT_ACCESS_SECRET) as JwtPayload & {
+      userId?: string;
+      tokenType?: string;
+    };
+  } catch {
+    throw new AppError(httpStatus.BAD_REQUEST, "Invalid or expired verification token");
+  }
+
+  if (decoded.tokenType !== "email_verify" || !decoded.userId) {
+    throw new AppError(httpStatus.BAD_REQUEST, "Invalid verification token");
+  }
+
+  const user = await User.findById(decoded.userId);
+  if (!user) {
+    throw new AppError(httpStatus.NOT_FOUND, "User not found");
+  }
+
+  if (user.isVerified) {
+    return { alreadyVerified: true };
+  }
+
+  user.isVerified = true;
+  await user.save();
+
+  return { verified: true };
+};
+
+const resendVerification = async (email: string) => {
+  const user = await User.findOne({ email });
+  if (!user) {
+    throw new AppError(httpStatus.NOT_FOUND, "User not found");
+  }
+
+  if (user.isVerified) {
+    return { alreadyVerified: true };
+  }
+
+  const verificationToken = createEmailVerificationToken(user);
+  return { verificationToken };
+};
 
 export const AuthService = {
   credentialsLogin,
   getNewAccessToken,
-  resetPassword
+  resetPassword,
+  setPassword,
+  changePassword,
+  createEmailVerificationToken,
+  verifyEmail,
+  resendVerification
 };
-
