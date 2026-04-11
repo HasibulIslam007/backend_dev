@@ -1,6 +1,21 @@
 import { z } from "zod";
 
-export const createTourZodSchema = z.object({
+export const createTourZodSchema = z.preprocess((input) => {
+  if (
+    input &&
+    typeof input === "object" &&
+    "data" in input &&
+    typeof (input as { data?: unknown }).data === "string"
+  ) {
+    try {
+      return JSON.parse((input as { data: string }).data);
+    } catch {
+      return input;
+    }
+  }
+
+  return input;
+}, z.object({
   title: z.string().min(2).max(100),
 
   slug: z.string().min(2).max(100).optional(),
@@ -32,7 +47,7 @@ export const createTourZodSchema = z.object({
   division: z.string(),
 
   tourTypes: z.array(z.string())
-});
+}));
 
 export const updateTourZodSchema = z.object({
   title: z.string().min(2).max(100).optional(),

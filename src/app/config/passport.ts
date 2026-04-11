@@ -1,113 +1,146 @@
-
-import passport from "passport"
-import { Strategy as GoogleStrategy, type Profile } from "passport-google-oauth20";
-import type { VerifyCallback } from "passport-google-oauth20";
-import {envVars} from "./env.js";
-import { User } from "../modules/user/user.model.js";
-import { UserRole } from "../modules/user/user.interface.js";
-import { Strategy as LocalStrategy } from "passport-local";
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import bcryptjs from "bcryptjs";
+import passport from "passport";
+import { Strategy as GoogleStrategy, type Profile, type VerifyCallback } from "passport-google-oauth20";
+import { Strategy as LocalStrategy } from "passport-local";
+import { IsActive, UserRole } from "../modules/user/user.interface.js";
+import { User } from "../modules/user/user.model.js";
+import { envVars } from "./env.js";
+
+
 passport.use(
-    new LocalStrategy(
-        {
-            usernameField: "email",
-            passwordField: "password",
-        },
-        async (
-            email: string,
-            password: string,
-            done: (err: any, user?: any, info?: { message?: string }) => void
-        ) => {
-            try {
-                const isUserExist = await User.findOne({ email });
+    new LocalStrategy({
+        usernameField: "email",
+        passwordField: "password"
+    }, async (email: string, password: string, done) => {
+        try {
+            const isUserExist = await User.findOne({ email })
 
-                if (!isUserExist) {
-                    return done(null, false, { message: "Incorrect email or password." });
-                }
-                const isGoogleAuthenticated = Array.isArray(isUserExist.auths) && isUserExist.auths.some(auth => auth.provider === "google");
+            // if (!isUserExist) {
+            //     return done(null, false, { message: "User does not exist" })
+            // }
 
-                if (isGoogleAuthenticated || !isUserExist.password) {
-                    return done(null, false, { message: "Please login with Google." });
-                }
-
-                const isPasswordMatched = await bcryptjs.compare(password as string, isUserExist.password);
-
-                if (!isPasswordMatched) {
-                    return done(null, false, { message: "Incorrect email or password." });
-                }
-                
-                // You should add password validation here if needed
-                return done(null, isUserExist);
-            } catch (error) {
-                return done(error, false);
+            if (!isUserExist) {
+                return done("User does not exist")
             }
+
+            if (!isUserExist.isVerified) {
+                // throw new AppError(httpStatus.BAD_REQUEST, "User is not verified")
+                return done("User is not verified")
+            }
+
+            if (isUserExist.isActive === IsActive.BLOCKED || isUserExist.isActive === IsActive.INACTIVE) {
+                // throw new AppError(httpStatus.BAD_REQUEST, `User is ${isUserExist.isActive}`)
+                return done(`User is ${isUserExist.isActive}`)
+            }
+            if (isUserExist.isDeleted) {
+                // throw new AppError(httpStatus.BAD_REQUEST, "User is deleted")
+                return done("User is deleted")
+            }
+
+
+            const isGoogleAuthenticated = isUserExist.auths.some(providerObjects => providerObjects.provider == "google")
+
+            if (isGoogleAuthenticated && !isUserExist.password) {
+                return done(null, false, { message: "You have authenticated through Google. So if you want to login with credentials, then at first login with google and set a password for your Gmail and then you can login with email and password." })
+            }
+
+            // if (isGoogleAuthenticated) {
+            //     return done("You have authenticated through Google. So if you want to login with credentials, then at first login with google and set a password for your Gmail and then you can login with email and password.")
+            // }
+
+            const isPasswordMatched = await bcryptjs.compare(password as string, isUserExist.password as string)
+
+            if (!isPasswordMatched) {
+                return done(null, false, { message: "Password does not match" })
+            }
+
+            return done(null, isUserExist)
+
+        } catch (error) {
+            console.log(error);
+            done(error)
         }
-    )
+    })
 )
 
-
-
-
-
 passport.use(
-
     new GoogleStrategy(
         {
             clientID: envVars.GOOGLE_CLIENT_ID,
             clientSecret: envVars.GOOGLE_CLIENT_SECRET,
-            callbackURL: envVars.GOOGLE_CALLBACK_URL,
-        },
-        async (accessToken: string, refreshToken: string, profile: Profile, done: VerifyCallback)=> {
+            callbackURL: envVars.GOOGLE_CALLBACK_URL
+        }, async (accessToken: string, refreshToken: string, profile: Profile, done: VerifyCallback) => {
 
             try {
+                const email = profile.emails?.[0].value;
 
-                const email = Array.isArray(profile.emails) && profile.emails.length > 0 && profile.emails[0] && profile.emails[0].value
-                    ? profile.emails[0].value
-                    : undefined;
-
-                if(!email){
-                    return done(null, false, { message: "No email found in Google profile" });
+                if (!email) {
+                    return done(null, false, { mesaage: "No email found" })
                 }
 
-                const user = await User.findOne({ email: email });
+                let isUserExist = await User.findOne({ email })
+                if (isUserExist && !isUserExist.isVerified) {
+                    // throw new AppError(httpStatus.BAD_REQUEST, "User is not verified")
+                    // done("User is not verified")
+                    return done(null, false, { message: "User is not verified" })
+                }
 
-                if (!user) {
-                    const newUser = new User({
+                if (isUserExist && (isUserExist.isActive === IsActive.BLOCKED || isUserExist.isActive === IsActive.INACTIVE)) {
+                    // throw new AppError(httpStatus.BAD_REQUEST, `User is ${isUserExist.isActive}`)
+                    done(`User is ${isUserExist.isActive}`)
+                }
+
+                if (isUserExist && isUserExist.isDeleted) {
+                    return done(null, false, { message: "User is deleted" })
+                    // done("User is deleted")
+                }
+
+                if (!isUserExist) {
+                    const picture = profile.photos?.[0]?.value;
+                    isUserExist = await User.create({
                         email,
                         name: profile.displayName,
-                        googleId: profile.photos && profile.photos[0] ? profile.photos[0].value : undefined,
-                        role: UserRole.USER, // Use a specific role value
-                        isVerified: true, // Mark as verified since it's from Google
+                        ...(picture ? { picture } : {}),
+                        role: UserRole.USER,
+                        isVerified: true,
                         auths: [
-                            { 
+                            {
                                 provider: "google",
                                 providerId: profile.id
                             }
                         ]
-                    });
-                    await newUser.save();
-                    return done(null, newUser);
-                } else {
-                    return done(null, user);
+                    })
                 }
+
+                return done(null, isUserExist)
+
+
             } catch (error) {
-                return done(error, false);
+                console.log("Google Strategy Error", error);
+                return done(error)
             }
         }
-    
     )
 )
 
+// frontend localhost:5173/login?redirect=/booking -> localhost:5000/api/v1/auth/google?redirect=/booking -> passport -> Google OAuth Consent -> gmail login -> successful -> callback url localhost:5000/api/v1/auth/google/callback -> db store -> token
 
-passport.serializeUser((user: any, done:(err: any, id?: any) => void) => {
-    done(null, user._id);
-});
+// Bridge == Google -> user db store -> token
+//Custom -> email , password, role : USER, name... -> registration -> DB -> 1 User create
+//Google -> req -> google -> successful : Jwt Token : Role , email -> DB - Store -> token - api access
 
-passport.deserializeUser(async (id: string, done:(err: any, user?: any) => void) => {
+
+passport.serializeUser((user: any, done: (err: any, id?: unknown) => void) => {
+    done(null, user._id)
+})
+
+passport.deserializeUser(async (id: string, done: any) => {
     try {
         const user = await User.findById(id);
-        done(null, user);
+        done(null, user)
     } catch (error) {
-        done(error, null);
+        console.log(error);
+        done(error)
     }
-});
+})

@@ -14,6 +14,8 @@ import passport from "passport";
 
 
 
+
+
 const credentialsLogin = catchAsync(async (req: Request, res: Response, next:NextFunction) => {
    
 
@@ -88,13 +90,40 @@ const logout= catchAsync(async (req: Request, res: Response) => {
     });
 });
 
-const resetPassword = catchAsync(async (req: Request, res: Response) => {
+const resetPassword = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
 
-    const newPassword = req.body.newPassword;
-    const oldPassword = req.body.oldPassword;
     const decodedToken = req.user
 
-    await AuthService.resetPassword(oldPassword, newPassword, decodedToken as JwtPayload);
+    await AuthService.resetPassword(req.body, decodedToken as JwtPayload);
+
+    sendResponse(res, {
+        success: true,
+        statusCode: StatusCodes.OK,
+        message: "Password Changed Successfully",
+        data: null,
+    })
+})
+const forgetPassword = catchAsync(async (req: Request, res: Response) => {
+
+
+    const decodedToken = req.user
+
+    await AuthService.resetPassword(req.body, decodedToken as JwtPayload);
+
+    sendResponse(res, {
+        success: true,
+        statusCode: StatusCodes.OK,
+        message: "Password Changed Successfully",
+        data: null,
+    })
+});
+const setPassword = catchAsync(async (req: Request, res: Response) => {
+
+    const decodedToken = req.user as JwtPayload
+
+    const {password } = req.body
+
+    await AuthService.resetPassword("", decodedToken.userId,password, );
 
     sendResponse(res, {
         success: true,
@@ -125,11 +154,47 @@ const googleCallbackController = catchAsync(async (req: Request, res: Response) 
 
 })
 
+const verifyEmail = catchAsync(async (req: Request, res: Response) => {
+    const token = typeof req.body.token === "string" ? req.body.token : "";
+    if (!token) {
+        throw new AppError(StatusCodes.BAD_REQUEST, "Verification token is required");
+    }
+
+    const result = await AuthService.verifyEmail(token);
+
+    sendResponse(res, {
+        statusCode: StatusCodes.OK,
+        success: true,
+        message: result.alreadyVerified ? "User is already verified" : "Email verified successfully",
+        data: result
+    });
+});
+
+const resendVerification = catchAsync(async (req: Request, res: Response) => {
+    const email = typeof req.body.email === "string" ? req.body.email : "";
+    if (!email) {
+        throw new AppError(StatusCodes.BAD_REQUEST, "Email is required");
+    }
+
+    const result = await AuthService.resendVerification(email);
+
+    sendResponse(res, {
+        statusCode: StatusCodes.OK,
+        success: true,
+        message: result.alreadyVerified ? "User is already verified" : "Verification token generated",
+        data: result
+    });
+});
+
 
 export const AuthController = {
     credentialsLogin,
     getNewAccessToken,
     logout,
     resetPassword,
-    googleCallbackController
+    googleCallbackController,
+    forgetPassword,
+    setPassword,
+    verifyEmail,
+    resendVerification
 }   

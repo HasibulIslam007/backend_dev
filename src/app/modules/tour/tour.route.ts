@@ -6,13 +6,16 @@ import { validateRequest } from "../../middlewares/validateRequest.js";
 
 import { createTourTypeZodSchema, createTourZodSchema, updateTourZodSchema} from "./tour.validation.js";
 import { TourController } from "./tour.controller.js";
+import multer from "multer";
 
 
 
 const router = Router();
 
 router.post("/create",
+
     checkAuth(UserRole.ADMIN, UserRole.SUPER_ADMIN),
+    multer().array("files"),
     validateRequest(createTourZodSchema),
     TourController.createTour,
 

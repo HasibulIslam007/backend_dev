@@ -1,10 +1,31 @@
 import type { Request, Response } from "express";
 import { TourService } from "./tour.service.js";
 import { sendResponse } from "../../utils/sendResponse.js";
+import type { ITour } from "./tour.interface.js";
+import AppError from "../../errorHelper/AppError.js";
 
 const createTour = async (req: Request, res: Response) => {
+    const bodyPayload: Partial<ITour> = { ...req.body };
 
-    const result = await TourService.createTour(req.body);
+    if (typeof req.body?.data === "string") {
+        try {
+            Object.assign(bodyPayload, JSON.parse(req.body.data));
+        } catch {
+            throw new AppError(400, "Invalid JSON format in data field");
+        }
+    }
+
+    const uploadedFiles = Array.isArray(req.files) ? req.files : [];
+    const uploadedImagePaths = uploadedFiles
+        .map((file) => file.path)
+        .filter((path): path is string => Boolean(path));
+
+    const payload: ITour = {
+        ...(bodyPayload as ITour),
+        ...(uploadedImagePaths.length ? { images: uploadedImagePaths } : {}),
+    };
+
+    const result = await TourService.createTour(payload);
 
     sendResponse(res, {
         statusCode : 200,
@@ -24,7 +45,7 @@ const getAllTours = async (req: Request, res: Response) => {
         success : true,
         message : "Tours retrieved successfully",
         data : result.data,
-        meta : result.meta
+        meta : { total: result.meta.totalDocuments }
     })  
 
 

@@ -3,11 +3,35 @@ import { catchAsync } from "../../utils/catchAsync.js";
 import { sendResponse } from "../../utils/sendResponse.js";
 import type { Request, Response } from "express";
 import { DivisionService } from "./division.service.js";
+import AppError from "../../errorHelper/AppError.js";
+import type { IDivision } from "./division.interface.js";
 
 
 const createDivision = catchAsync(async(req:Request, res:Response) => {
 
-    const result = await DivisionService.createDivision(req.body);
+
+    const payload: IDivision = {
+        ...req.body,
+        thumbnail: req.file?.path || "",
+    };
+
+    if (typeof req.body?.data === "string") {
+        try {
+            Object.assign(payload, JSON.parse(req.body.data));
+        } catch {
+            throw new AppError(400, "Invalid JSON format in data field");
+        }
+    }
+
+    if (req.file?.path && !payload.thumbnail) {
+        payload.thumbnail = req.file.path;
+    }
+
+    if (!payload.name) {
+        throw new AppError(400, "Division name is required");
+    }
+
+    const result = await DivisionService.createDivision(payload as IDivision);
 
     sendResponse(res, {
         statusCode : 200,

@@ -1,6 +1,8 @@
 import { Router } from "express";
 import { AuthController } from "./auth.controller.js";
 import { checkAuth } from "../../middlewares/checkAuth.js";
+import { validateRequest } from "../../middlewares/validateRequest.js";
+import { resendVerificationZodSchema, verifyEmailZodSchema } from "./auth.validation.js";
 
 import { UserRole } from "../user/user.interface.js";
 import passport from "passport";
@@ -13,6 +15,10 @@ router.post("/login",  AuthController.credentialsLogin);
 router.post("/refresh-token", AuthController.getNewAccessToken);
 router.post("/logout", AuthController.logout);
 router.post("/reset-password", checkAuth(...Object.values(UserRole)),AuthController.resetPassword);   
+router.post("/forget-password" ,AuthController.forgetPassword); 
+router.post("/set-password", checkAuth(...Object.values(UserRole)),AuthController.setPassword);     
+router.post("/verify-email", validateRequest(verifyEmailZodSchema), AuthController.verifyEmail);
+router.post("/resend-verification", validateRequest(resendVerificationZodSchema), AuthController.resendVerification);
 
 router.get("/google", async(req:Request, res:Response , next:NextFunction)=>{
     const redirect = req.query.redirect ? req.query.redirect as string : ""

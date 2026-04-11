@@ -4,6 +4,8 @@ import type { Request, Response} from "express";
 import { StatusCodes } from "http-status-codes";
 import { UserService } from "./user.service.js";
 import { catchAsync } from "../../utils/catchAsync.js";
+import { AuthService } from "../auth/auth.service.js";
+import { envVars } from "../../config/env.js";
 
 import { sendResponse } from "../../utils/sendResponse.js";
 import httpStatus from "http-status-codes";
@@ -13,12 +15,20 @@ import httpStatus from "http-status-codes";
 
 const createUser = catchAsync(async(req: Request, res: Response) => {
     const user = await UserService.createUser(req.body)
+    const verificationToken = AuthService.createEmailVerificationToken(user);
+    const { password, ...safeUser } = user.toObject();
+
+    const data: Record<string, unknown> = { user: safeUser };
+    if (envVars.NODE_ENV !== "production") {
+        data.verificationToken = verificationToken;
+        data.verificationUrl = `${envVars.FRONTEND_URL}/verify-email?token=${verificationToken}`;
+    }
 
     sendResponse(res, {
         statusCode: StatusCodes.CREATED,
         success: true,
-        message: "User created successfully",
-        data: user
+        message: "User created successfully. Please verify your email.",
+        data
         });
 });
 

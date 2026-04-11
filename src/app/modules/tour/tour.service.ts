@@ -55,6 +55,16 @@ const deleteTour = async (id: string) => {
     return await Tour.findByIdAndDelete(id);
 }
 
+const createTourType = async (name: string) => {
+    const existingTourType = await TourType.findOne({ name });
+
+    if (existingTourType) {
+        throw new Error("Tour type already exists");
+    }
+
+    return await TourType.create({ name });
+}
+
 const getAllTourTypes = async () => {
     return await TourType.find();
 }
@@ -77,6 +87,7 @@ const deleteTourType = async (id: string) => {
 
 export const TourService = {
     createTour,
+    createTourType,
     updateTour,
     deleteTour,
     getAllTourTypes,
