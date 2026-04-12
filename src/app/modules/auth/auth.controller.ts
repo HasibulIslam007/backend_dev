@@ -1,16 +1,17 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { AuthService } from "./auth.service.js";
 import { catchAsync } from "../../utils/catchAsync.js";
-import  type {Request , Response ,NextFunction} from "express";
+import type { Request, Response, NextFunction } from "express";
 import { sendResponse } from "../../utils/sendResponse.js";
 import { StatusCodes } from "http-status-codes";
 import { setAuthCookie } from "../../utils/setCookie.js";
 import type { JwtPayload } from "jsonwebtoken";
-import { th } from "zod/locales";
 import AppError from "../../errorHelper/AppError.js";
 import { createTokens } from "../../utils/userTokens.js";
 import { envVars } from "../../config/env.js";
 import passport from "passport";
+import httpStatus from "http-status-codes";
 
 
 
@@ -29,7 +30,7 @@ const credentialsLogin = catchAsync(async (req: Request, res: Response, next:Nex
 
         const userToken = await createTokens(user);
 
-        const {password: pass, ...rest}= user.toObject();
+        const {password, ...rest}= user.toObject();
         
     
 
@@ -58,6 +59,7 @@ const getNewAccessToken = catchAsync(async (req: Request, res: Response) => {
             statusCode: StatusCodes.UNAUTHORIZED,
             success: false,
             message: "Refresh token not found",
+            data: null,
         });
     }
 
@@ -98,7 +100,7 @@ const resetPassword = catchAsync(async (req: Request, res: Response, next: NextF
 
     sendResponse(res, {
         success: true,
-        statusCode: StatusCodes.OK,
+        statusCode: httpStatus.OK,
         message: "Password Changed Successfully",
         data: null,
     })
@@ -106,15 +108,25 @@ const resetPassword = catchAsync(async (req: Request, res: Response, next: NextF
 const forgetPassword = catchAsync(async (req: Request, res: Response) => {
 
 
-    const decodedToken = req.user
+    const { email } = req.body;
 
-    await AuthService.resetPassword(req.body, decodedToken as JwtPayload);
+    if (!email) {
+        throw new AppError(StatusCodes.BAD_REQUEST, "Email is required");
+    }
+
+    const result = await AuthService.forgetPassword(email);
+
+    const data: Record<string, unknown> = {};
+    if (envVars.NODE_ENV !== "production") {
+        data.resetToken = result.resetToken;
+        data.resetUrl = `${envVars.FRONTEND_URL}/reset-password?token=${result.resetToken}`;
+    }
 
     sendResponse(res, {
         success: true,
         statusCode: StatusCodes.OK,
-        message: "Password Changed Successfully",
-        data: null,
+        message: "Password reset link sent successfully",
+        data
     })
 });
 const setPassword = catchAsync(async (req: Request, res: Response) => {
@@ -123,7 +135,7 @@ const setPassword = catchAsync(async (req: Request, res: Response) => {
 
     const {password } = req.body
 
-    await AuthService.resetPassword("", decodedToken.userId,password, );
+    await AuthService.setPassword(decodedToken.userId, password);
 
     sendResponse(res, {
         success: true,

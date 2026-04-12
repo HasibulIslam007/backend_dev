@@ -1,5 +1,6 @@
 import { envVars } from "../../config/env.js"
 import AppError from "../../errorHelper/AppError.js"
+import { Payment } from "../payment/payment.model.js"
 import type { ISSLComerz } from "./sslCommerz.interface.js"
 import axios from "axios"
 import httpStatus from "http-status-codes"
@@ -13,9 +14,9 @@ const sslPaymentInit = async (payload: ISSLComerz) => {
             total_amount: payload.amount,
             currency: "EUR",
             tran_id: payload.transactionId,
-            success_url: `${envVars.SSL_SUCCESS_FRONTEND_URL}?transactionId=${payload.transactionId}`,
-            fail_url: `${envVars.SSL_FAIL_FRONTEND_URL}?transactionId=${payload.transactionId}`,
-            cancel_url: `${envVars.SSL_CANCEL_FRONTEND_URL}?transactionId=${payload.transactionId}`,
+            success_url: `${envVars.SSL_SUCCESS_BACKEND_URL}?transactionId=${payload.transactionId}`,
+            fail_url: `${envVars.SSL_FAIL_BACKEND_URL}?transactionId=${payload.transactionId}`,
+            cancel_url: `${envVars.SSL_CANCEL_BACKEND_URL}?transactionId=${payload.transactionId}`,
             cus_name: payload.name,
             cus_email: payload.email,
             cus_add1: payload.address,
@@ -50,12 +51,33 @@ const sslPaymentInit = async (payload: ISSLComerz) => {
         }
     })
     return response.data;
-    } catch (error) {
+    } catch (error: unknown) {
         console.error("Error occurred while initializing SSL payment:", error)
-        throw new  AppError(httpStatus.BAD_REQUEST, error.message)
+        const message = error instanceof Error ? error.message : "Unknown error";
+        throw new AppError(httpStatus.BAD_REQUEST, message)
+    }
+}
+
+const validatePayment = async (payload: any) => {
+    try {
+        const response = await axios({
+            method: "GET",
+            url: `${envVars.SSL_VALIDATION_API}?val_id=${payload.val_id}&store_id=${envVars.SSL_STORE_ID}&store_passwd=${envVars.SSL_STORE_PASSWORD}`
+        })
+
+        console.log("sslcomeerz validate api response", response.data);
+
+        await Payment.updateOne(
+            { transactionId: payload.tran_id },
+            { paymentGatewayData: response.data },
+            { runValidators: true })
+    } catch (error: any) {
+        console.log(error);
+        throw new AppError(401, `Payment Validation Error, ${error.message}`)
     }
 }
 
 export const SSLService = {
-    sslPaymentInit
+    sslPaymentInit,
+    validatePayment
 }

@@ -29,6 +29,9 @@ const credentialsLogin = async (payload: Partial<IUser>) => {
   if (!isUserExist) {
     throw new AppError(httpStatus.BAD_REQUEST, "Invalid email or password");
   }
+  if (!isUserExist.password) {
+    throw new AppError(httpStatus.BAD_REQUEST, "Password is not set for this account");
+  }
 
   // ✅ Step 3: Compare password safely
   const isPasswordValid = await bcrypt.compare(password, isUserExist.password);
@@ -37,28 +40,23 @@ const credentialsLogin = async (payload: Partial<IUser>) => {
   }
 
   // ✅ Step 4: Return safe user data
-  const { password: _password, ...userWithoutPassword } = isUserExist.toObject();
+  const { password: _, ...userWithoutPassword } = isUserExist.toObject();
 
   const userToken = createTokens(isUserExist)
 
-
-  const {password :pass, ...rest} = isUserExist.toObject();
   return {
     success: true,
     message: "Login successful",
     user: userWithoutPassword,
     accessToken: userToken.accessToken,
-    refreshToken: userToken.refreshToken,
-    user: rest
+    refreshToken: userToken.refreshToken
   };
 };
 
 
 const getNewAccessToken = async (refreshToken: string) => {
   const tokenInfo = await createNewAccessTokenWithRefreshToken(refreshToken);
-  return {
-    accessToken: tokenInfo
-  }
+  return tokenInfo;
 };
 
 const resetPassword = async (payload: Record<string, any>, decodedToken: JwtPayload) => {
@@ -125,7 +123,9 @@ const setPassword = async(userId:string , plainPassword: string) => {
 
   }
 
+
 const EMAIL_VERIFY_EXPIRES = "1d";
+const PASSWORD_RESET_EXPIRES = "15m";
 
 const createEmailVerificationToken = (user: Partial<IUser>) => {
   if (!user._id) {
@@ -183,6 +183,32 @@ const resendVerification = async (email: string) => {
   return { verificationToken };
 };
 
+const createPasswordResetToken = (user: Partial<IUser>) => {
+  if (!user._id) {
+    throw new AppError(httpStatus.INTERNAL_SERVER_ERROR, "User id missing for reset token");
+  }
+  const payload = {
+    userId: user._id,
+    tokenType: "password_reset",
+  } as JwtPayload;
+
+  return generateToken(payload, envVars.JWT_ACCESS_SECRET, PASSWORD_RESET_EXPIRES);
+};
+
+const forgetPassword = async (email: string) => {
+  if (!email) {
+    throw new AppError(httpStatus.BAD_REQUEST, "Email is required");
+  }
+
+  const user = await User.findOne({ email });
+  if (!user) {
+    throw new AppError(httpStatus.NOT_FOUND, "User not found");
+  }
+
+  const resetToken = createPasswordResetToken(user);
+  return { resetToken };
+};
+
 export const AuthService = {
   credentialsLogin,
   getNewAccessToken,
@@ -191,5 +217,6 @@ export const AuthService = {
   changePassword,
   createEmailVerificationToken,
   verifyEmail,
-  resendVerification
+  resendVerification,
+  forgetPassword
 };

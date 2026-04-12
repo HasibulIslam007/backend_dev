@@ -26,18 +26,30 @@ interface EnvConfig {
     SSL_SUCCESS_FRONTEND_URL: string
     SSL_FAIL_FRONTEND_URL: string
     SSL_CANCEL_FRONTEND_URL: string
+    SSL_IPN_URL: string
     SSL_SUCCESS_BACKEND_URL: string
     SSL_FAIL_BACKEND_URL: string
     SSL_CANCEL_BACKEND_URL: string
     CLOUDINARY_CLOUD_NAME: string
     CLOUDINARY_API_KEY: string
     CLOUDINARY_API_SECRET: string
+    EMAIL_SENDER: {
+        SMTP_HOST: string,
+        SMTP_PORT: number,
+        SMTP_USER: string,
+        SMTP_PASS: string,
+        SMTP_FROM: string
+    }
+    REDIS_HOST?: string
+    REDIS_PORT?: number
+    REDIS_PASSWORD?: string
+    REDIS_USERNAME?: string
 
 
 }
 
 const loadEnvVariables = (): EnvConfig => {
-    const requiredEnvVariables: string[] = ["PORT", "DB_URL", "NODE_ENV", "BCRYPT_SALT_ROUND", "JWT_ACCESS_EXPIRES", "JWT_ACCESS_SECRET", "SUPER_ADMIN_EMAIL", "SUPER_ADMIN_PASSWORD", "JWT_REFRESH_SECRET", "JWT_REFRESH_EXPIRES","GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "GOOGLE_CALLBACK_URL", "EXPRESS_SESSION_SECRET", "FRONTEND_URL", "SSL_STORE_ID", "SSL_STORE_PASSWORD", "SSL_PAYMENT_API", "SSL_VALIDATION_API", "SSL_SUCCESS_FRONTEND_URL", "SSL_FAIL_FRONTEND_URL", "SSL_CANCEL_FRONTEND_URL", "SSL_SUCCESS_BACKEND_URL", "SSL_FAIL_BACKEND_URL", "SSL_CANCEL_BACKEND_URL", "CLOUDINARY_CLOUD_NAME", "CLOUDINARY_API_KEY", "CLOUDINARY_API_SECRET" ];
+    const requiredEnvVariables: string[] = ["DB_URL", "NODE_ENV", "BCRYPT_SALT_ROUND", "JWT_ACCESS_EXPIRES", "JWT_ACCESS_SECRET", "SUPER_ADMIN_EMAIL", "SUPER_ADMIN_PASSWORD", "JWT_REFRESH_SECRET", "JWT_REFRESH_EXPIRES","GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "GOOGLE_CALLBACK_URL", "EXPRESS_SESSION_SECRET", "FRONTEND_URL", "SSL_STORE_ID", "SSL_STORE_PASSWORD", "SSL_PAYMENT_API", "SSL_VALIDATION_API", "SSL_SUCCESS_FRONTEND_URL", "SSL_FAIL_FRONTEND_URL", "SSL_CANCEL_FRONTEND_URL", "SSL_SUCCESS_BACKEND_URL", "SSL_FAIL_BACKEND_URL", "SSL_CANCEL_BACKEND_URL", "SSL_IPN_URL", "CLOUDINARY_CLOUD_NAME", "CLOUDINARY_API_KEY", "CLOUDINARY_API_SECRET", "SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASS", "SMTP_FROM"];
 
     requiredEnvVariables.forEach(key => {
         if (!process.env[key]) {
@@ -45,8 +57,8 @@ const loadEnvVariables = (): EnvConfig => {
         }
     })
 
-    return {
-        PORT: process.env.PORT as string,
+    const config: EnvConfig = {
+        PORT: process.env.PORT || "5000",
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         DB_URL: process.env.DB_URL!,
         NODE_ENV: process.env.NODE_ENV as "development" | "production",
@@ -72,10 +84,34 @@ const loadEnvVariables = (): EnvConfig => {
         SSL_SUCCESS_BACKEND_URL: process.env.SSL_SUCCESS_BACKEND_URL as string,
         SSL_FAIL_BACKEND_URL: process.env.SSL_FAIL_BACKEND_URL as string,
         SSL_CANCEL_BACKEND_URL: process.env.SSL_CANCEL_BACKEND_URL as string,
+        SSL_IPN_URL: process.env.SSL_IPN_URL as string,
         CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME as string,
         CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY as string,
         CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET as string,
+        EMAIL_SENDER: {
+            SMTP_HOST: process.env.SMTP_HOST as string,
+            SMTP_PORT: parseInt(process.env.SMTP_PORT as string),
+            SMTP_USER: process.env.SMTP_USER as string,
+            SMTP_PASS: process.env.SMTP_PASS as string,
+            SMTP_FROM: process.env.SMTP_FROM as string
+        },
+     }
+
+    if (process.env.REDIS_HOST) {
+        config.REDIS_HOST = process.env.REDIS_HOST;
     }
-}
+    if (process.env.REDIS_PORT) {
+        config.REDIS_PORT = parseInt(process.env.REDIS_PORT, 10);
+    }
+    if (process.env.REDIS_PASSWORD) {
+        config.REDIS_PASSWORD = process.env.REDIS_PASSWORD;
+    }
+    if (process.env.REDIS_USERNAME) {
+        config.REDIS_USERNAME = process.env.REDIS_USERNAME;
+    }
+
+    return config;
+    }
+
 
 export const envVars = loadEnvVariables()

@@ -1,0 +1,1 @@
+{"version":3,"file":"ErrorPage.d.ts","sourceRoot":"","sources":["../../../src/app/middlewares/ErrorPage.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,OAAO,EAAE,QAAQ,EAAE,MAAM,SAAS,CAAC;AAGjD,QAAA,MAAM,SAAS,GAAG,KAAI,OAAO,EAAE,KAAK,QAAQ,SAI3C,CAAA;AAED,eAAe,SAAS,CAAC"}

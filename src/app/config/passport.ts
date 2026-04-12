@@ -39,7 +39,9 @@ passport.use(
             }
 
 
-            const isGoogleAuthenticated = isUserExist.auths.some(providerObjects => providerObjects.provider == "google")
+            const isGoogleAuthenticated = (isUserExist.auths ?? []).some(
+                providerObjects => providerObjects.provider == "google"
+            )
 
             if (isGoogleAuthenticated && !isUserExist.password) {
                 return done(null, false, { message: "You have authenticated through Google. So if you want to login with credentials, then at first login with google and set a password for your Gmail and then you can login with email and password." })
@@ -73,7 +75,7 @@ passport.use(
         }, async (accessToken: string, refreshToken: string, profile: Profile, done: VerifyCallback) => {
 
             try {
-                const email = profile.emails?.[0].value;
+                const email = profile.emails?.[0]?.value;
 
                 if (!email) {
                     return done(null, false, { mesaage: "No email found" })

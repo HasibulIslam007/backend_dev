@@ -25,9 +25,7 @@ const createBooking = async( payload: Partial<IBooking>, userId: string)=> {
 
         const user = await User.findById(userId);
 
-        if(!user?.phone|| !user?.address){
-            throw new Error("User must have phone and address to create a booking");
-         }
+
          
          const tour = await Tour.findById(payload.tour).select("costFrom");
             if(!tour?.costFrom){

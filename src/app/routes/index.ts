@@ -9,6 +9,11 @@ import { BookingRoutes } from "../modules/booking/booking.route.js";
 
 import { PaymentRoute } from "../modules/payment/payment.route.js";
 
+import { OtpRoutes } from "../modules/otp/otp.route.js";
+
+import { StatsRoutes } from "../modules/stats/stats.route.js";
+
+
 
 export const router = Router();
 
@@ -37,7 +42,14 @@ const modulesRoutes = [
         path: "/payments",
         route: PaymentRoute
     },
-    
+    {
+        path: "/otp",
+        route: OtpRoutes
+    },
+    {
+        path: "/stats",
+        route: StatsRoutes
+    }
 ]
 
 modulesRoutes.forEach((route)=>{

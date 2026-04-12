@@ -1,11 +1,13 @@
 
-import type { Request, Response} from "express";
+import type { Request, Response } from "express";
 
 import { StatusCodes } from "http-status-codes";
 import { UserService } from "./user.service.js";
 import { catchAsync } from "../../utils/catchAsync.js";
 import { AuthService } from "../auth/auth.service.js";
 import { envVars } from "../../config/env.js";
+import AppError from "../../errorHelper/AppError.js";
+import type { JwtPayload } from "jsonwebtoken";
 
 import { sendResponse } from "../../utils/sendResponse.js";
 import httpStatus from "http-status-codes";
@@ -16,7 +18,8 @@ import httpStatus from "http-status-codes";
 const createUser = catchAsync(async(req: Request, res: Response) => {
     const user = await UserService.createUser(req.body)
     const verificationToken = AuthService.createEmailVerificationToken(user);
-    const { password, ...safeUser } = user.toObject();
+    const safeUser = user.toObject();
+    delete safeUser.password;
 
     const data: Record<string, unknown> = { user: safeUser };
     if (envVars.NODE_ENV !== "production") {
@@ -43,12 +46,19 @@ const getAllUsers = catchAsync(async(req: Request, res: Response) => {
     })
 });
 
-const updateUser = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
-    const userId = req.params.id;
+const updateUser = catchAsync(async (req: Request, res: Response) => {
+    const userId = typeof req.params.id === "string" ? req.params.id : "";
+    if (!userId) {
+        throw new AppError(httpStatus.BAD_REQUEST, "User id is required");
+    }
     // const token = req.headers.authorization
     // const verifiedToken = verifyToken(token as string, envVars.JWT_ACCESS_SECRET) as JwtPayload
 
-    const verifiedToken = req.user;
+    if (!req.user) {
+        throw new AppError(httpStatus.UNAUTHORIZED, "Unauthorized access");
+    }
+
+    const verifiedToken = req.user as JwtPayload;
 
     const payload = req.body;
     const user = await UserService.updateUser(userId, payload, verifiedToken)

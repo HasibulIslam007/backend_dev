@@ -1,0 +1,11 @@
+/* eslint-disable no-unused-vars */
+import { Types } from "mongoose";
+export var BOOKING_STATUS;
+(function (BOOKING_STATUS) {
+    BOOKING_STATUS["PENDING"] = "PENDING";
+    BOOKING_STATUS["CANCEL"] = "CANCEL";
+    BOOKING_STATUS["CONFIRM"] = "CONFIRM";
+    BOOKING_STATUS["COMPLETED"] = "COMPLETED";
+    BOOKING_STATUS["FAILED"] = "FAILED";
+})(BOOKING_STATUS || (BOOKING_STATUS = {}));
+//# sourceMappingURL=booking.interface.js.map

@@ -14,7 +14,7 @@ const router =Router()
 router.post("/login",  AuthController.credentialsLogin);
 router.post("/refresh-token", AuthController.getNewAccessToken);
 router.post("/logout", AuthController.logout);
-router.post("/reset-password", checkAuth(...Object.values(UserRole)),AuthController.resetPassword);   
+router.post("/reset-password", checkAuth(...Object.values(UserRole)), AuthController.resetPassword) 
 router.post("/forget-password" ,AuthController.forgetPassword); 
 router.post("/set-password", checkAuth(...Object.values(UserRole)),AuthController.setPassword);     
 router.post("/verify-email", validateRequest(verifyEmailZodSchema), AuthController.verifyEmail);
